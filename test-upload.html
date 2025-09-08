@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Proposal Backend - Test Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Proposal Backend Test</h1>
+        
+        <div class="upload-section">
+            <h3>Upload RFP PDF Document</h3>
+            <input type="file" id="pdfFile" accept=".pdf">
+            <br>
+            <button onclick="uploadAndProcess()">📄 Upload & Generate Proposal</button>
+            <button onclick="extractOnly()">📝 Extract Requirements Only</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        function showResult(content, isError = false) {
+            const resultDiv = document.getElementById('result');
+            const className = isError ? 'result error' : 'result success';
+            resultDiv.innerHTML = `<div class="${className}">${content}</div>`;
+        }
+
+        function showLoading() {
+            showResult('⏳ Processing... Please wait.');
+        }
+
+        async function uploadAndProcess() {
+            const fileInput = document.getElementById('pdfFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showResult('Please select a PDF file first.', true);
+                return;
+            }
+
+            if (file.type !== 'application/pdf') {
+                showResult('Please select a valid PDF file.', true);
+                return;
+            }
+
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('file', file); // Using 'file' as field name
+
+            try {
+                const response = await fetch(`${API_BASE}/upload-rfp`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showResult(`
+                        <h4>✅ Success!</h4>
+                        <p><strong>File:</strong> ${result.originalFileName}</p>
+                        <p><strong>Message:</strong> ${result.message}</p>
+                        <h5>📋 Extracted Requirements (Preview):</h5>
+                        <pre>${result.extractedRequirements}</pre>
+                        <h5>📄 Generated Proposal:</h5>
+                        <pre>${JSON.stringify(result.proposal, null, 2)}</pre>
+                    `);
+                } else {
+                    showResult(`<h4>❌ Error</h4><p>${result.error}</p><p>${result.details || ''}</p>`, true);
+                }
+            } catch (error) {
+                showResult(`<h4>❌ Network Error</h4><p>${error.message}</p>`, true);
+            }
+        }
+
+        async function extractOnly() {
+            const fileInput = document.getElementById('pdfFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showResult('Please select a PDF file first.', true);
+                return;
+            }
+
+            if (file.type !== 'application/pdf') {
+                showResult('Please select a valid PDF file.', true);
+                return;
+            }
+
+            showLoading();
+
+            const formData = new FormData();
+            formData.append('document', file); // Using 'document' as field name
+
+            try {
+                const response = await fetch(`${API_BASE}/extract-rfp`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showResult(`
+                        <h4>✅ Requirements Extracted!</h4>
+                        <p><strong>File:</strong> ${result.originalFileName}</p>
+                        <p><strong>Word Count:</strong> ${result.wordCount}</p>
+                        <h5>📋 Extracted Requirements:</h5>
+                        <pre>${result.extractedRequirements}</pre>
+                    `);
+                } else {
+                    showResult(`<h4>❌ Error</h4><p>${result.error}</p><p>${result.details || ''}</p>`, true);
+                }
+            } catch (error) {
+                showResult(`<h4>❌ Network Error</h4><p>${error.message}</p>`, true);
+            }
+        }
+    </script>
+</body>
+</html>
